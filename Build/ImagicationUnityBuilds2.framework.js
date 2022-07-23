@@ -1315,7 +1315,7 @@ function _emscripten_asm_const_id(code, a0) {
  return ASM_CONSTS[code](a0);
 }
 STATIC_BASE = GLOBAL_BASE;
-STATICTOP = STATIC_BASE + 3127536;
+STATICTOP = STATIC_BASE + 3186832;
 __ATINIT__.push({
  func: (function() {
   __GLOBAL__sub_I_AccessibilityScriptingClasses_cpp();
@@ -3385,7 +3385,7 @@ __ATINIT__.push({
   ___emscripten_environ_constructor();
  })
 });
-var STATIC_BUMP = 3127536;
+var STATIC_BUMP = 3186832;
 Module["STATIC_BASE"] = STATIC_BASE;
 Module["STATIC_BUMP"] = STATIC_BUMP;
 var tempDoublePtr = STATICTOP;
@@ -3788,6 +3788,103 @@ function _JS_SystemInfo_HasFullscreen() {
 function _JS_SystemInfo_HasWebGL() {
  return Module.SystemInfo.hasWebGL;
 }
+function _JS_SystemInfo_IsMobile() {
+ return Module.SystemInfo.mobile;
+}
+var webcam = {
+ canvas: null
+};
+function _JS_WebCamVideo_CanPlay(deviceId) {
+ return MediaDevices[deviceId].video && MediaDevices[deviceId].video.videoWidth > 0 && MediaDevices[deviceId].video.videoHeight > 0;
+}
+function _JS_WebCamVideo_GetDeviceName(deviceId, buffer, bufferSize) {
+ if (buffer) stringToUTF8(MediaDevices[deviceId].deviceName, buffer, bufferSize);
+ return lengthBytesUTF8(MediaDevices[deviceId].deviceName);
+}
+function _JS_WebCamVideo_GetNativeHeight(deviceId) {
+ return MediaDevices[deviceId].video ? MediaDevices[deviceId].video.videoHeight : 0;
+}
+function _JS_WebCamVideo_GetNativeWidth(deviceId) {
+ return MediaDevices[deviceId].video ? MediaDevices[deviceId].video.videoWidth : 0;
+}
+function _JS_WebCamVideo_GetNumDevices() {
+ return MediaDevices.length;
+}
+function _JS_WebCamVideo_GrabFrame(deviceId, buffer, destWidth, destHeight) {
+ if (!MediaDevices[deviceId].video) {
+  console.error("WebCam not initialized.");
+  return;
+ }
+ var context = webcam.canvas.getContext("2d");
+ if (context) {
+  canvas.width = destWidth;
+  canvas.height = destHeight;
+  context.drawImage(MediaDevices[deviceId].video, 0, 0, MediaDevices[deviceId].video.videoWidth, MediaDevices[deviceId].video.videoHeight, 0, 0, destWidth, destHeight);
+  var imageData = context.getImageData(0, 0, destWidth, destHeight);
+  writeArrayToMemory(imageData.data, buffer);
+ } else {
+  console.log("2d Context is null");
+ }
+}
+function _JS_WebCamVideo_Start(deviceId) {
+ if (MediaDevices[deviceId].video) {
+  MediaDevices[deviceId].refCount++;
+  return;
+ }
+ if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+  navigator.getMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+ } else {
+  navigator.getMedia = (function(constraints, success, error) {
+   navigator.mediaDevices.getUserMedia(constraints).then(success).catch(error);
+  });
+ }
+ if (!navigator.getMedia) {
+  console.log("WebCam is not supported. Try a different browser.");
+  return;
+ }
+ if (!webcam.canvas) {
+  canvas = document.createElement("canvas");
+  canvas.style.display = "none";
+  var context2d = canvas.getContext("2d");
+  if (!context2d) {
+   console.log("context2d is null");
+   return;
+  }
+  document.body.appendChild(canvas);
+  webcam.canvas = canvas;
+ }
+ var video = document.createElement("video");
+ navigator.getMedia({
+  video: true,
+  audio: false
+ }, (function(stream) {
+  video.srcObject = stream;
+  webcam.canvas.appendChild(video);
+  video.play();
+  MediaDevices[deviceId].video = video;
+  MediaDevices[deviceId].stream = stream;
+  MediaDevices[deviceId].refCount++;
+ }), (function(err) {
+  console.log("An error occurred! " + err);
+ }));
+}
+function _JS_WebCamVideo_Stop(deviceId) {
+ if (!MediaDevices[deviceId].video) {
+  console.error("WebCam not initialized.");
+  return;
+ }
+ if (--MediaDevices[deviceId].refCount == 0) {
+  webcam.canvas.removeChild(MediaDevices[deviceId].video);
+  MediaDevices[deviceId].video = null;
+  MediaDevices[deviceId].stream.getVideoTracks().forEach((function(track) {
+   if (track.stop) track.stop();
+  }));
+ }
+}
+function _JS_WebCam_IsSupported() {
+ var getMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+ return getMedia != null;
+}
 var wr = {
  requestInstances: {},
  nextRequestId: 1
@@ -3964,6 +4061,158 @@ function _SocketSend(socketInstance, ptr, length) {
 function _SocketState(socketInstance) {
  var socket = webSocketInstances[socketInstance];
  return socket.socket.readyState;
+}
+function _Unity_BrowserCallFactory_InjectJsCode(jscode) {
+ var txt = UTF8ToString(jscode);
+ eval(txt);
+}
+function _Unity_DeviceApi_LastUpdate() {
+ return awrtc.CAPI_DeviceApi_LastUpdate();
+}
+function _Unity_DeviceApi_RequestUpdate() {
+ awrtc.CAPI_DeviceApi_RequestUpdate();
+}
+function _Unity_DeviceApi_Update() {
+ awrtc.CAPI_DeviceApi_Update();
+}
+function _Unity_InitAsync(initmode) {
+ awrtc.CAPI_InitAsync(initmode);
+}
+function _Unity_MediaNetwork_Configure(lIndex, audio, video, minWidth, minHeight, maxWidth, maxHeight, idealWidth, idealHeight, minFps, maxFps, idealFps, deviceName) {
+ awrtc.CAPI_MediaNetwork_Configure(lIndex, audio, video, minWidth, minHeight, maxWidth, maxHeight, idealWidth, idealHeight, minFps, maxFps, idealFps, UTF8ToString(deviceName));
+}
+function _Unity_MediaNetwork_Create(lJsonConfiguration) {
+ return awrtc.CAPI_MediaNetwork_Create(UTF8ToString(lJsonConfiguration));
+}
+function _Unity_MediaNetwork_GetConfigurationError(lIndex) {
+ return awrtc.CAPI_MediaNetwork_GetConfigurationError(lIndex);
+}
+function _Unity_MediaNetwork_GetConfigurationState(lIndex) {
+ return awrtc.CAPI_MediaNetwork_GetConfigurationState(lIndex);
+}
+function _Unity_MediaNetwork_HasAudioTrack(lIndex, connectionId) {
+ return awrtc.CAPI_MediaNetwork_HasAudioTrack(lIndex, connectionId);
+}
+function _Unity_MediaNetwork_HasUserMedia() {
+ return awrtc.CAPI_MediaNetwork_HasUserMedia();
+}
+function _Unity_MediaNetwork_HasVideoTrack(lIndex, connectionId) {
+ return awrtc.CAPI_MediaNetwork_HasVideoTrack(lIndex, connectionId);
+}
+function _Unity_MediaNetwork_IsAvailable() {
+ awrtc.CAPI_DeviceApi_Update();
+ if ("awrtc" in window && typeof awrtc.CAPI_MediaNetwork_IsAvailable === "function") {
+  return awrtc.CAPI_MediaNetwork_IsAvailable();
+ }
+ return false;
+}
+function _Unity_MediaNetwork_IsMute(lIndex) {
+ return awrtc.CAPI_MediaNetwork_IsMute(lIndex);
+}
+function _Unity_MediaNetwork_ResetConfiguration(lIndex) {
+ awrtc.CAPI_MediaNetwork_ResetConfiguration(lIndex);
+}
+function _Unity_MediaNetwork_SetMute(lIndex, value) {
+ awrtc.CAPI_MediaNetwork_SetMute(lIndex, value);
+}
+function _Unity_MediaNetwork_SetVolume(lIndex, volume, connectionId) {
+ awrtc.CAPI_MediaNetwork_SetVolume(lIndex, volume, connectionId);
+}
+function _Unity_MediaNetwork_TryGetFrame(lIndex, lConnectionId, lWidthInt32ArrayPtr, lHeightInt32ArrayPtr, lBufferUint8ArrayPtr, lBufferUint8ArrayOffset, lBufferUint8ArrayLength) {
+ return awrtc.CAPI_MediaNetwork_TryGetFrame(lIndex, lConnectionId, HEAP32, lWidthInt32ArrayPtr >> 2, HEAP32, lHeightInt32ArrayPtr >> 2, HEAPU8, lBufferUint8ArrayPtr + lBufferUint8ArrayOffset, lBufferUint8ArrayLength);
+}
+function _Unity_MediaNetwork_TryGetFrameDataLength(lIndex, connectionId) {
+ return awrtc.CAPI_MediaNetwork_TryGetFrameDataLength(lIndex, connectionId);
+}
+function _Unity_MediaNetwork_TryGetFrame_Resolution(lIndex, connectionId, lWidthInt32ArrayPtr, lHeightInt32ArrayPtr) {
+ return awrtc.CAPI_MediaNetwork_TryGetFrame_Resolution(lIndex, connectionId, HEAP32, lWidthInt32ArrayPtr >> 2, HEAP32, lHeightInt32ArrayPtr >> 2);
+}
+function _Unity_MediaNetwork_TryGetFrame_ToTexture(lIndex, lConnectionId, lWidth, lHeight, lTexture) {
+ return awrtc.CAPI_MediaNetwork_TryGetFrame_ToTexture(lIndex, lConnectionId, lWidth, lHeight, GLctx, GL.textures[lTexture]);
+}
+function _Unity_Media_GetVideoDevices(lIndex, lBufferPtr, lBufferLen) {
+ var jsres = awrtc.CAPI_Media_GetVideoDevices(lIndex);
+ var strToUTF8 = stringToUTF8;
+ if (typeof strToUTF8 !== "function") strToUTF8 = window.Module.stringToUTF8;
+ strToUTF8(jsres, lBufferPtr, lBufferLen);
+}
+function _Unity_Media_GetVideoDevices_Length() {
+ return awrtc.CAPI_Media_GetVideoDevices_Length();
+}
+function _Unity_PollInitState() {
+ return awrtc.CAPI_PollInitState();
+}
+function _Unity_SLog_SetLogLevel(loglevel) {
+ awrtc.CAPI_SLog_SetLogLevel(loglevel);
+}
+function _Unity_VideoInput_AddCanvasDevice(query, name, width, height, fps) {
+ return awrtc.CAPI_VideoInput_AddCanvasDevice(UTF8ToString(query), UTF8ToString(name), width, height, fps);
+}
+function _Unity_VideoInput_AddDevice(name, width, height, fps) {
+ awrtc.CAPI_VideoInput_AddDevice(UTF8ToString(name), width, height, fps);
+}
+function _Unity_VideoInput_RemoveDevice() {
+ awrtc.CAPI_VideoInput_RemoveDevice(UTF8ToString(name));
+}
+function _Unity_VideoInput_UpdateFrame(name, lBufferUint8ArrayPtr, lBufferUint8ArrayOffset, lBufferUint8ArrayLength, width, height, rotation, firstRowIsBottom) {
+ return awrtc.CAPI_VideoInput_UpdateFrame(UTF8ToString(name), HEAPU8, lBufferUint8ArrayPtr + lBufferUint8ArrayOffset, lBufferUint8ArrayLength, width, height, rotation, firstRowIsBottom);
+}
+function _Unity_WebRtcNetwork_Connect(lIndex, lRoom) {
+ return awrtc.CAPI_WebRtcNetwork_Connect(lIndex, UTF8ToString(lRoom));
+}
+function _Unity_WebRtcNetwork_Create(lConfiguration) {
+ return awrtc.CAPI_WebRtcNetwork_Create(UTF8ToString(lConfiguration));
+}
+function _Unity_WebRtcNetwork_Dequeue(lIndex, lTypeIntArrayPtr, lConidIntArrayPtr, lUint8ArrayDataPtr, lUint8ArrayDataOffset, lUint8ArrayDataLength, lDataLenIntArrayPtr) {
+ var val = awrtc.CAPI_WebRtcNetwork_DequeueEm(lIndex, HEAP32, lTypeIntArrayPtr >> 2, HEAP32, lConidIntArrayPtr >> 2, HEAPU8, lUint8ArrayDataPtr + lUint8ArrayDataOffset, lUint8ArrayDataLength, HEAP32, lDataLenIntArrayPtr >> 2);
+ return val;
+}
+function _Unity_WebRtcNetwork_Disconnect(lIndex, lConnectionId) {
+ awrtc.CAPI_WebRtcNetwork_Disconnect(lIndex, lConnectionId);
+}
+function _Unity_WebRtcNetwork_Flush(lIndex) {
+ awrtc.CAPI_WebRtcNetwork_Flush(lIndex);
+}
+function _Unity_WebRtcNetwork_GetBufferedAmount(lIndex, lConnectionId, lReliable) {
+ var sndReliable = true;
+ if (lReliable == false || lReliable == 0 || lReliable == "false" || lReliable == "False") sndReliable = false;
+ return awrtc.CAPI_WebRtcNetwork_GetBufferedAmount(lIndex, lConnectionId, sndReliable);
+}
+function _Unity_WebRtcNetwork_IsAvailable() {
+ if ("awrtc" in window && typeof awrtc.CAPI_WebRtcNetwork_IsAvailable === "function") {
+  return awrtc.CAPI_WebRtcNetwork_IsAvailable();
+ }
+ return false;
+}
+function _Unity_WebRtcNetwork_IsBrowserSupported() {
+ return awrtc.CAPI_WebRtcNetwork_IsBrowserSupported();
+}
+function _Unity_WebRtcNetwork_Peek(lIndex, lTypeIntArrayPtr, lConidIntArrayPtr, lUint8ArrayDataPtr, lUint8ArrayDataOffset, lUint8ArrayDataLength, lDataLenIntArrayPtr) {
+ var val = awrtc.CAPI_WebRtcNetwork_PeekEm(lIndex, HEAP32, lTypeIntArrayPtr >> 2, HEAP32, lConidIntArrayPtr >> 2, HEAPU8, lUint8ArrayDataPtr + lUint8ArrayDataOffset, lUint8ArrayDataLength, HEAP32, lDataLenIntArrayPtr >> 2);
+ return val;
+}
+function _Unity_WebRtcNetwork_PeekEventDataLength(lIndex) {
+ return awrtc.CAPI_WebRtcNetwork_PeekEventDataLength(lIndex);
+}
+function _Unity_WebRtcNetwork_Release(lIndex) {
+ awrtc.CAPI_WebRtcNetwork_Release(lIndex);
+}
+function _Unity_WebRtcNetwork_SendData(lIndex, lConnectionId, lUint8ArrayDataPtr, lUint8ArrayDataOffset, lUint8ArrayDataLength, lReliable) {
+ var sndReliable = true;
+ if (lReliable == false || lReliable == 0 || lReliable == "false" || lReliable == "False") sndReliable = false;
+ return awrtc.CAPI_WebRtcNetwork_SendDataEm(lIndex, lConnectionId, HEAPU8, lUint8ArrayDataPtr + lUint8ArrayDataOffset, lUint8ArrayDataLength, sndReliable);
+}
+function _Unity_WebRtcNetwork_Shutdown(lIndex) {
+ awrtc.CAPI_WebRtcNetwork_Shutdown(lIndex);
+}
+function _Unity_WebRtcNetwork_StartServer(lIndex, lRoom) {
+ awrtc.CAPI_WebRtcNetwork_StartServer(lIndex, UTF8ToString(lRoom));
+}
+function _Unity_WebRtcNetwork_StopServer(lIndex) {
+ awrtc.CAPI_WebRtcNetwork_StopServer(lIndex);
+}
+function _Unity_WebRtcNetwork_Update(lIndex) {
+ awrtc.CAPI_WebRtcNetwork_Update(lIndex);
 }
 function ___atomic_compare_exchange_8(ptr, expected, desiredl, desiredh, weak, success_memmodel, failure_memmodel) {
  var pl = HEAP32[ptr >> 2];
@@ -16361,8 +16610,8 @@ function nullFunc_vjji(x) {
  err("Build with ASSERTIONS=2 for more info.");
  abort(x);
 }
-Module["wasmTableSize"] = 97144;
-Module["wasmMaxTableSize"] = 97144;
+Module["wasmTableSize"] = 98484;
+Module["wasmMaxTableSize"] = 98484;
 function invoke_dddi(index, a1, a2, a3) {
  var sp = stackSave();
  try {
@@ -19783,6 +20032,16 @@ Module.asmLibraryArg = {
  "_JS_SystemInfo_HasCursorLock": _JS_SystemInfo_HasCursorLock,
  "_JS_SystemInfo_HasFullscreen": _JS_SystemInfo_HasFullscreen,
  "_JS_SystemInfo_HasWebGL": _JS_SystemInfo_HasWebGL,
+ "_JS_SystemInfo_IsMobile": _JS_SystemInfo_IsMobile,
+ "_JS_WebCamVideo_CanPlay": _JS_WebCamVideo_CanPlay,
+ "_JS_WebCamVideo_GetDeviceName": _JS_WebCamVideo_GetDeviceName,
+ "_JS_WebCamVideo_GetNativeHeight": _JS_WebCamVideo_GetNativeHeight,
+ "_JS_WebCamVideo_GetNativeWidth": _JS_WebCamVideo_GetNativeWidth,
+ "_JS_WebCamVideo_GetNumDevices": _JS_WebCamVideo_GetNumDevices,
+ "_JS_WebCamVideo_GrabFrame": _JS_WebCamVideo_GrabFrame,
+ "_JS_WebCamVideo_Start": _JS_WebCamVideo_Start,
+ "_JS_WebCamVideo_Stop": _JS_WebCamVideo_Stop,
+ "_JS_WebCam_IsSupported": _JS_WebCam_IsSupported,
  "_JS_WebRequest_Abort": _JS_WebRequest_Abort,
  "_JS_WebRequest_Create": _JS_WebRequest_Create,
  "_JS_WebRequest_GetResponseHeaders": _JS_WebRequest_GetResponseHeaders,
@@ -19799,6 +20058,51 @@ Module.asmLibraryArg = {
  "_SocketRecvLength": _SocketRecvLength,
  "_SocketSend": _SocketSend,
  "_SocketState": _SocketState,
+ "_Unity_BrowserCallFactory_InjectJsCode": _Unity_BrowserCallFactory_InjectJsCode,
+ "_Unity_DeviceApi_LastUpdate": _Unity_DeviceApi_LastUpdate,
+ "_Unity_DeviceApi_RequestUpdate": _Unity_DeviceApi_RequestUpdate,
+ "_Unity_DeviceApi_Update": _Unity_DeviceApi_Update,
+ "_Unity_InitAsync": _Unity_InitAsync,
+ "_Unity_MediaNetwork_Configure": _Unity_MediaNetwork_Configure,
+ "_Unity_MediaNetwork_Create": _Unity_MediaNetwork_Create,
+ "_Unity_MediaNetwork_GetConfigurationError": _Unity_MediaNetwork_GetConfigurationError,
+ "_Unity_MediaNetwork_GetConfigurationState": _Unity_MediaNetwork_GetConfigurationState,
+ "_Unity_MediaNetwork_HasAudioTrack": _Unity_MediaNetwork_HasAudioTrack,
+ "_Unity_MediaNetwork_HasUserMedia": _Unity_MediaNetwork_HasUserMedia,
+ "_Unity_MediaNetwork_HasVideoTrack": _Unity_MediaNetwork_HasVideoTrack,
+ "_Unity_MediaNetwork_IsAvailable": _Unity_MediaNetwork_IsAvailable,
+ "_Unity_MediaNetwork_IsMute": _Unity_MediaNetwork_IsMute,
+ "_Unity_MediaNetwork_ResetConfiguration": _Unity_MediaNetwork_ResetConfiguration,
+ "_Unity_MediaNetwork_SetMute": _Unity_MediaNetwork_SetMute,
+ "_Unity_MediaNetwork_SetVolume": _Unity_MediaNetwork_SetVolume,
+ "_Unity_MediaNetwork_TryGetFrame": _Unity_MediaNetwork_TryGetFrame,
+ "_Unity_MediaNetwork_TryGetFrameDataLength": _Unity_MediaNetwork_TryGetFrameDataLength,
+ "_Unity_MediaNetwork_TryGetFrame_Resolution": _Unity_MediaNetwork_TryGetFrame_Resolution,
+ "_Unity_MediaNetwork_TryGetFrame_ToTexture": _Unity_MediaNetwork_TryGetFrame_ToTexture,
+ "_Unity_Media_GetVideoDevices": _Unity_Media_GetVideoDevices,
+ "_Unity_Media_GetVideoDevices_Length": _Unity_Media_GetVideoDevices_Length,
+ "_Unity_PollInitState": _Unity_PollInitState,
+ "_Unity_SLog_SetLogLevel": _Unity_SLog_SetLogLevel,
+ "_Unity_VideoInput_AddCanvasDevice": _Unity_VideoInput_AddCanvasDevice,
+ "_Unity_VideoInput_AddDevice": _Unity_VideoInput_AddDevice,
+ "_Unity_VideoInput_RemoveDevice": _Unity_VideoInput_RemoveDevice,
+ "_Unity_VideoInput_UpdateFrame": _Unity_VideoInput_UpdateFrame,
+ "_Unity_WebRtcNetwork_Connect": _Unity_WebRtcNetwork_Connect,
+ "_Unity_WebRtcNetwork_Create": _Unity_WebRtcNetwork_Create,
+ "_Unity_WebRtcNetwork_Dequeue": _Unity_WebRtcNetwork_Dequeue,
+ "_Unity_WebRtcNetwork_Disconnect": _Unity_WebRtcNetwork_Disconnect,
+ "_Unity_WebRtcNetwork_Flush": _Unity_WebRtcNetwork_Flush,
+ "_Unity_WebRtcNetwork_GetBufferedAmount": _Unity_WebRtcNetwork_GetBufferedAmount,
+ "_Unity_WebRtcNetwork_IsAvailable": _Unity_WebRtcNetwork_IsAvailable,
+ "_Unity_WebRtcNetwork_IsBrowserSupported": _Unity_WebRtcNetwork_IsBrowserSupported,
+ "_Unity_WebRtcNetwork_Peek": _Unity_WebRtcNetwork_Peek,
+ "_Unity_WebRtcNetwork_PeekEventDataLength": _Unity_WebRtcNetwork_PeekEventDataLength,
+ "_Unity_WebRtcNetwork_Release": _Unity_WebRtcNetwork_Release,
+ "_Unity_WebRtcNetwork_SendData": _Unity_WebRtcNetwork_SendData,
+ "_Unity_WebRtcNetwork_Shutdown": _Unity_WebRtcNetwork_Shutdown,
+ "_Unity_WebRtcNetwork_StartServer": _Unity_WebRtcNetwork_StartServer,
+ "_Unity_WebRtcNetwork_StopServer": _Unity_WebRtcNetwork_StopServer,
+ "_Unity_WebRtcNetwork_Update": _Unity_WebRtcNetwork_Update,
  "__ZSt18uncaught_exceptionv": __ZSt18uncaught_exceptionv,
  "___atomic_compare_exchange_8": ___atomic_compare_exchange_8,
  "___atomic_fetch_add_8": ___atomic_fetch_add_8,
